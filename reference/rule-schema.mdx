@@ -1,0 +1,80 @@
+---
+title: "declarativeNetRequest Rule Schema"
+sidebarTitle: "Rule Schema"
+description: "Complete reference for the Chrome declarativeNetRequest rule object used by Traffic Blocker, covering every field, its type, and default value."
+---
+
+Each rule that Traffic Blocker stores and registers with the Chrome browser corresponds to a `chrome.declarativeNetRequest.Rule` object. When rules are saved or imported, the extension validates every entry and automatically fills in any missing fields with safe defaults — so malformed or partial rules are corrected rather than rejected.
+
+## Top-level fields
+
+<ParamField body="id" type="number" required>
+  Unique rule identifier. Traffic Blocker automatically reassigns IDs sequentially (1-indexed) on every save operation. Do not rely on ID stability across sessions or imports.
+</ParamField>
+
+<ParamField body="priority" type="number" required>
+  Matching priority for the rule. Defaults to `1`. When multiple rules could match the same request, the rule with the highest priority value takes precedence.
+</ParamField>
+
+<ParamField body="action" type="object" required>
+  Defines what to do when the rule matches a request. See the [`action` object](#action-object) section below.
+</ParamField>
+
+<ParamField body="condition" type="object" required>
+  Defines which requests the rule should match. See the [`condition` object](#condition-object) section below.
+</ParamField>
+
+## `action` object
+
+<ParamField body="type" type="string" required>
+  The action to take when the rule matches. Always `"block"` in Traffic Blocker. The extension's UI only exposes the block action type.
+</ParamField>
+
+## `condition` object
+
+<ParamField body="urlFilter" type="string" required>
+  The URL pattern to match against incoming requests. Supports wildcards and Chrome's declarativeNetRequest filter syntax. See [URL Patterns](/reference/url-patterns) for full pattern reference.
+</ParamField>
+
+<ParamField body="initiatorDomains" type="string[]">
+  Optional list of domains that must have initiated the request for the rule to apply. When set, the rule is scoped — it only blocks the target URL when the request originates from one of these domains. Cannot be combined with `excludedInitiatorDomains` on the same rule.
+</ParamField>
+
+<ParamField body="excludedInitiatorDomains" type="string[]">
+  Optional list of domains from which requests should never be blocked, even if the URL matches. When a rule is added through the UI without specifying `initiatorDomains`, Traffic Blocker automatically adds `"localhost"` to this list to avoid disrupting local development servers.
+</ParamField>
+
+## Complete example
+
+```json
+{
+  "id": 1,
+  "priority": 1,
+  "action": { "type": "block" },
+  "condition": {
+    "urlFilter": "*://*.doubleclick.net/*",
+    "excludedInitiatorDomains": ["localhost"]
+  }
+}
+```
+
+## Auto-fix behavior
+
+When rules are imported — whether from a JSON file, a URL, or a preset — the extension runs each entry through an auto-fix function before registering it. This fills in any missing or malformed fields using the following logic from `background.ts`:
+
+```typescript
+const autoFixRule = (rule: any, index: number): any => {
+    return {
+        id: index + 1,
+        priority: typeof rule.priority === 'number' ? rule.priority : (typeof rule.priority === 'string' ? parseInt(rule.priority, 10) : 1),
+        action: rule.action && typeof rule.action.type === 'string' ? rule.action : {type: 'block'},
+        condition: rule.condition && typeof rule.condition.urlFilter === 'string' ? rule.condition : {urlFilter: rule.condition?.urlFilter || rule.rule || ''}
+    };
+};
+```
+
+After auto-fix, IDs are reassigned a second time to guarantee a clean 1-indexed sequence with no gaps. The `priority` field accepts both numeric and string values; strings are coerced with `parseInt`. If no valid `urlFilter` can be found in `condition`, the importer falls back to a top-level `rule` property for backwards compatibility with older export formats.
+
+<Note>
+  Traffic Blocker only uses action type `block`. The full Chrome declarativeNetRequest spec supports additional action types (allow, redirect, etc.) which are not exposed through the UI.
+</Note>

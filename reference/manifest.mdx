@@ -1,0 +1,99 @@
+---
+title: "Chrome Extension Manifest Configuration"
+sidebarTitle: "Manifest"
+description: "Reference for Traffic Blocker's manifest.json — permissions, host permissions, background service worker, and popup action configuration."
+---
+
+`public/manifest.json` declares the Chrome extension's metadata, permissions, and entry points. At build time, `vite.config.ts` merges `name`, `description`, and `version` from `package.json` into the final manifest via the `generateManifest()` helper, ensuring the values in `dist/manifest.json` always stay in sync with `package.json`.
+
+## Full Manifest
+
+```json
+{
+  "manifest_version": 3,
+  "name": "Traffic blocker",
+  "description": "Customize your browsing experience by blocking unwanted traffic",
+  "version": "0.1.2",
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": "blocker.png"
+  },
+  "permissions": [
+    "storage",
+    "webRequest",
+    "declarativeNetRequest",
+    "declarativeNetRequestFeedback",
+    "nativeMessaging"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "background": {
+    "service_worker": "assets/background.js"
+  }
+}
+```
+
+## Field Reference
+
+<ParamField path="manifest_version" type="number" required>
+  Must be `3` for Manifest V3. Chrome has deprecated MV2 and requires MV3 for all new and updated extensions submitted to the Chrome Web Store.
+</ParamField>
+
+<ParamField path="action.default_popup" type="string">
+  The HTML file shown when the user clicks the extension's toolbar icon. Resolves to `index.html` at the root of the `dist/` directory, which is the Vite-built popup entry point.
+</ParamField>
+
+<ParamField path="action.default_icon" type="string">
+  The icon file displayed in the Chrome toolbar. References `blocker.png`, which is copied from `public/` to `dist/` during the build.
+</ParamField>
+
+<ParamField path="permissions" type="string[]">
+  Chrome APIs the extension is permitted to call at runtime:
+
+  | Permission | Purpose |
+  |---|---|
+  | `storage` | Persist blocking rules and settings via `chrome.storage` |
+  | `webRequest` | Read-only access to network request lifecycle events |
+  | `declarativeNetRequest` | Declare and apply dynamic URL-blocking rules |
+  | `declarativeNetRequestFeedback` | Query which rules matched recent requests (blocked traffic counter) |
+  | `nativeMessaging` | Reserved for future communication with a native host process |
+</ParamField>
+
+<ParamField path="host_permissions" type="string[]">
+  URL patterns the extension is allowed to intercept and inspect. The patterns `http://*/*` and `https://*/*` grant access to all HTTP and HTTPS URLs, which is required for `declarativeNetRequest` rules to apply across all sites.
+</ParamField>
+
+<ParamField path="background.service_worker" type="string">
+  Path to the background script relative to the `dist/` root. The value `assets/background.js` matches the output path produced by the `rollupOptions.output.entryFileNames` pattern in `vite.config.ts`.
+</ParamField>
+
+## Version Merging at Build Time
+
+The source manifest under `public/manifest.json` intentionally keeps a static `version` field. At build time, `vite.config.ts` calls `readJsonFile('package.json')` and spreads `name`, `description`, and `version` from `package.json` on top of the manifest before Vite writes `dist/manifest.json`:
+
+```typescript
+function generateManifest() {
+    const manifest = readJsonFile("src/manifest.json");
+    const pkg = readJsonFile("package.json");
+    return {
+        name: pkg.name,
+        description: pkg.description,
+        version: pkg.version,
+        ...manifest,
+    };
+}
+```
+
+This means bumping the version in `package.json` is the single source of truth — the manifest version updates automatically on the next build.
+
+<Note>
+  Do not edit `dist/manifest.json` directly — it is overwritten on every build. Edit `public/manifest.json` and `package.json` instead.
+</Note>

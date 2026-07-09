@@ -1,0 +1,41 @@
+---
+title: "Enable Dark Mode in Traffic Blocker"
+sidebarTitle: "Dark Mode"
+description: "Toggle dark mode in Traffic Blocker's Settings. The preference is saved in chrome.storage.local and persists across browser sessions."
+---
+
+Dark mode switches the Traffic Blocker popup to a darker color palette, reducing eye strain in low-light environments. The setting lives in the **Settings** view, which you can open by clicking the **sliders icon** on the Dashboard.
+
+## Toggling Dark Mode
+
+<Steps>
+  <Step title="Open Settings">
+    From the Dashboard, click the **sliders icon** in the bottom navigation row to navigate to the Settings view.
+  </Step>
+  <Step title="Toggle the Dark mode switch">
+    At the top of Settings, find the **Dark mode** row and flip the toggle switch. The popup UI updates immediately — no reload required.
+  </Step>
+  <Step title="Return to the Dashboard">
+    Click the **back arrow** (chevron-left) in the top-left corner of Settings to return to the Dashboard with your new theme applied.
+  </Step>
+</Steps>
+
+<Tip>
+  Dark mode preference is independent of your OS theme setting — it must be toggled manually inside the extension.
+</Tip>
+
+## Persistence
+
+The dark mode preference is written to `chrome.storage.local` under the `settings` key every time you toggle the switch. When you reopen the extension popup, the root `App.vue` component reads this value on mount and applies the correct theme class before the UI renders, so there is no flash of the wrong theme.
+
+The storage structure for the `settings` key is:
+
+```typescript
+// chrome.storage.local structure
+interface Settings {
+  blocked: number;     // total requests blocked
+  darkMode?: boolean;  // dark mode preference
+}
+```
+
+Both `blocked` and `darkMode` share the same `settings` object in storage. Resetting statistics (setting `blocked` to `0`) does not affect your dark mode preference.

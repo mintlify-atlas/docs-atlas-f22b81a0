@@ -1,0 +1,100 @@
+{
+  "projectType": "frontend",
+  "projectName": "Traffic Blocker",
+  "projectDescription": "A Chrome MV3 extension that blocks unwanted network traffic using the declarativeNetRequest API, built with Vue 3 and TypeScript.",
+  "theme": "luma",
+  "primaryColor": "#0d6efd",
+  "lightColor": "#e8f0fe",
+  "darkColor": "#0a4fc4",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Using the Extension",
+            "pages": [
+              "guides/managing-rules",
+              "guides/import-export",
+              "guides/preset-blocklists",
+              "guides/statistics",
+              "guides/dark-mode"
+            ]
+          },
+          {
+            "group": "Architecture",
+            "pages": [
+              "architecture/overview",
+              "architecture/storage-schema",
+              "architecture/chrome-apis",
+              "architecture/build-and-package"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Reference",
+        "groups": [
+          {
+            "group": "Rule Format",
+            "pages": [
+              "reference/rule-schema",
+              "reference/url-patterns",
+              "reference/export-format"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "reference/manifest",
+              "reference/vite-config"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "reference/commands",
+              "reference/changelog"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Block URLs via wildcard patterns using Chrome declarativeNetRequest API",
+    "Optional initiator domain filtering (block only from or exclude specific domains)",
+    "Toggle all blocking on/off with a single switch",
+    "Inline rule editing via modal with URL filter, initiator domains, and excluded domains",
+    "Search and filter rules by URL pattern or domain",
+    "Reorder rules with up/down buttons to control matching priority",
+    "Duplicate detection warns when adding an existing rule",
+    "5-second undo window after deleting a rule",
+    "Clear all rules with one click",
+    "Export/Import rules as JSON with merge or replace options",
+    "Import blocklists directly from a remote URL",
+    "Built-in preset blocklists: Advertising, Trackers, Social Media, Malware",
+    "Blocked traffic counter with reset capability",
+    "Dark mode toggle with persistent preference"
+  ],
+  "publicApiSurface": [
+    "chrome.storage.local — keys: settings ({ blocked: number, darkMode?: boolean }), blocker ({ rules: Rule[], isEnabled: boolean })",
+    "chrome.declarativeNetRequest.updateDynamicRules — add/remove dynamic blocking rules",
+    "chrome.runtime.sendMessage({ updateRules: { data: Rule[], isEnabled: boolean } }) — update rules from popup to background",
+    "Rule schema: { id: number, priority: number, action: { type: 'block' }, condition: { urlFilter: string, initiatorDomains?: string[], excludedInitiatorDomains?: string[] } }",
+    "Export format: { rules: Rule[], isEnabled: boolean }",
+    "npm run dev — start Vite dev server",
+    "npm run build — TypeScript check + production build to dist/",
+    "npm run preview — preview production build",
+    "npm run package — build + create Chrome Web Store zip",
+    "npm run clean — remove dist/ and build/ folders"
+  ]
+}

@@ -1,0 +1,83 @@
+---
+title: "URL Filter Patterns for Traffic Blocker Rules"
+sidebarTitle: "URL Patterns"
+description: "How to write urlFilter patterns for Traffic Blocker rules, including wildcards, protocol matching, domain matching, and path matching."
+---
+
+The `urlFilter` field in a Traffic Blocker rule follows Chrome's `declarativeNetRequest` URL filter syntax. Patterns are matched against the full request URL — including protocol, domain, path, and query string — and support several wildcard and anchor characters to give you fine-grained control over what gets blocked.
+
+## Pattern syntax
+
+| Wildcard | Meaning | Example |
+|----------|---------|---------|
+| `*` | Match any number of characters | `*://*.example.com/*` |
+| `\|` at start | Match URL prefix | `\|https://example.com` |
+| `\|` at end | Match URL suffix | `.gif\|` |
+| `\|\|` | Match domain and all subdomains | `\|\|example.com` |
+
+## Common pattern examples
+
+```
+*://*.example.com/*          # Block all requests to example.com and subdomains
+*://ads.example.com/*        # Block only the ads subdomain
+*://*.example.com/ads/*      # Block only the /ads/ path on example.com
+*://*/track.js               # Block any URL ending in track.js
+https://*.example.com/*      # Block HTTPS requests only
+```
+
+Each pattern is tested against the full URL string. A pattern like `*://*/track.js` will match `https://cdn.any-domain.com/scripts/track.js` because the `*` portions absorb the protocol, hostname, and any intervening path segments.
+
+## Protocol matching
+
+The protocol prefix controls which request schemes the rule applies to:
+
+- `*://` matches both HTTP and HTTPS requests.
+- `https://` matches HTTPS requests only.
+- `http://` matches HTTP requests only.
+
+For most blocking use cases, `*://` is the right choice since many services serve content over both protocols or redirect between them.
+
+## Domain wildcard
+
+The `*` wildcard in the domain part of a pattern behaves as follows:
+
+- `*.example.com` matches `sub.example.com`, `deep.sub.example.com`, and any other subdomain depth.
+- `example.com` (no wildcard prefix) matches only the exact domain — subdomains are **not** included.
+
+To block a domain and all of its subdomains, always use `*://*.example.com/*` rather than `*://example.com/*` unless you specifically need to target the apex domain only.
+
+## Initiator domain filtering
+
+When you want to block a URL only when the request originates from a specific site, set `initiatorDomains` on the rule's condition. This is useful for blocking partner API calls that are specific to one application without affecting other pages that use the same endpoint.
+
+**Example:** Block `*://api.ads.com/*` only when the request is initiated from `shopping-site.com`:
+
+```json
+{
+  "condition": {
+    "urlFilter": "*://api.ads.com/*",
+    "initiatorDomains": ["shopping-site.com"]
+  }
+}
+```
+
+You can supply multiple domains in the array. The rule fires only if the initiating page's registrable domain matches one of the listed values.
+
+## Excluded initiator domains
+
+To allow requests from specific origins while still blocking them everywhere else, use `excludedInitiatorDomains`. Any request initiated from a domain in this list will bypass the rule entirely, even if the URL matches the `urlFilter`.
+
+**Example:** Block all requests to `*.doubleclick.net`, but never block them when the request comes from `localhost`:
+
+```json
+{
+  "condition": {
+    "urlFilter": "*://*.doubleclick.net/*",
+    "excludedInitiatorDomains": ["localhost"]
+  }
+}
+```
+
+<Tip>
+  Traffic Blocker automatically adds `localhost` to `excludedInitiatorDomains` when you add a rule without specifying initiator domains. This prevents blocking local development requests.
+</Tip>

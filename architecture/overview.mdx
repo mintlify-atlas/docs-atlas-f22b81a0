@@ -1,0 +1,104 @@
+---
+title: "Traffic Blocker Architecture: Popup, Background Worker, and Storage"
+sidebarTitle: "Overview"
+description: "How Traffic Blocker's Vue 3 popup, MV3 background service worker, and chrome.storage.local work together to block network requests."
+---
+
+Traffic Blocker is built on a two-process architecture mandated by Chrome's Manifest V3 platform. A **Vue 3 single-page application** runs as the popup and handles all user interaction, while a **background service worker** owns the privileged Chrome API calls that actually block traffic. The two processes communicate exclusively through `chrome.runtime.sendMessage` and `chrome.storage.local` — the popup never calls `declarativeNetRequest` directly.
+
+## Directory Structure
+
+```
+src/
+├── main.ts                  # Popup entry (Vue app + router)
+├── App.vue                  # Root component (dark mode state)
+├── background/
+│   └── background.ts        # Background service worker
+└── components/
+    ├── Dashboard.vue        # Main view — add/edit/delete/search/move rules, toggle
+    ├── Settings.vue         # Dark mode, export/import, presets
+    └── Statistics.vue       # Blocked traffic counter + reset
+```
+
+## Popup (Vue 3 SPA)
+
+`main.ts` bootstraps a Vue 3 application and mounts it to `#app` inside `index.html`. The app uses `vue-router` with `createWebHistory` and three named routes:
+
+| Path | Name | Component |
+|------|------|-----------|
+| `/` | `Dashboard` | `Dashboard.vue` — add, edit, delete, search, reorder rules, and toggle blocking |
+| `/statistics` | `Statistics` | `Statistics.vue` — blocked traffic counter with reset action |
+| `/settings` | `Settings` | `Settings.vue` — dark mode toggle, export/import, and preset blocklists |
+
+`App.vue` is the root component and owns the `isDarkMode` reactive ref. On mount it reads `settings.darkMode` from `chrome.storage.local` and applies (or removes) the `dark-mode` CSS class on `document.body`. It exposes `isDarkMode` to child routes via `defineExpose` and listens for a `toggle-dark-mode` event emitted up through the `<router-view>`:
+
+```vue
+<router-view :isDarkMode="isDarkMode" @toggle-dark-mode="isDarkMode = !isDarkMode"/>
+```
+
+## Background Service Worker
+
+The background script is registered in `manifest.json` as:
+
+```json
+{
+  "background": {
+    "service_worker": "assets/background.js"
+  }
+}
+```
+
+It registers three event listeners at startup inside an immediately-invoked `registerEventListeners()` call:
+
+- **`chrome.runtime.onInstalled`** — fires on first install. Reads both `settings` and `blocker` keys from `chrome.storage.local`. If `settings` is absent it writes `{ blocked: 0 }`. If `blocker` is absent it writes `{ rules: [], isEnabled: false }`.
+
+- **`chrome.webRequest.onErrorOccurred`** — attached to `<all_urls>` with the `extraHeaders` option. Each time a request fails with `res.error === 'net::ERR_BLOCKED_BY_CLIENT'` it reads the current `settings.blocked` value from storage and increments it by one.
+
+- **`chrome.runtime.onMessage`** — handles `updateRules` messages from the popup. A module-level `isUpdatingRules` boolean flag prevents concurrent updates from racing. When a valid message arrives the background auto-fixes and re-indexes every rule, fetches the current dynamic-rule IDs, removes them all, then adds the new set (or an empty array when blocking is disabled). Finally it persists the new state to `chrome.storage.local` and replies to the popup.
+
+## Communication Between Popup and Background
+
+The popup sends a single message type to the background whenever rules or the enabled state change:
+
+```typescript
+// Message sent by the popup (Dashboard.vue → chrome.runtime.sendMessage)
+interface UpdateRulesMessage {
+  updateRules: {
+    data: Rule[];       // full current rule list
+    isEnabled: boolean; // whether blocking should be active
+  };
+}
+
+// Response from the background service worker
+interface UpdateRulesResponse {
+  success: boolean;
+  error?: string; // present only on failure, e.g. "Update in progress"
+}
+```
+
+The listener returns `true` to keep the message channel open for the asynchronous `sendResponse` call, which is required by the Chrome runtime when responding after an `await` or callback boundary.
+
+## Data Flow
+
+When a user adds or edits a rule in the Dashboard the following sequence occurs:
+
+<Steps>
+  <Step title="User submits a rule">
+    The Dashboard component validates the input and pushes the new rule into the local `rules` array.
+  </Step>
+  <Step title="Popup calls updateStaticRules()">
+    The helper serialises the full rule list and the current `isEnabled` flag into an `UpdateRulesMessage`.
+  </Step>
+  <Step title="chrome.runtime.sendMessage dispatches to the background">
+    The popup calls `chrome.runtime.sendMessage({ updateRules: { data: rules, isEnabled } })` and awaits the response.
+  </Step>
+  <Step title="Background validates and auto-fixes">
+    The service worker runs each rule through `autoFixRule()`, reassigning sequential IDs starting from `1`.
+  </Step>
+  <Step title="declarativeNetRequest.updateDynamicRules applies the change">
+    All previous dynamic rules are removed by ID, then the new rules are added (or an empty array is added when `isEnabled` is `false`).
+  </Step>
+  <Step title="chrome.storage.local.set persists state">
+    The background writes `{ blocker: { rules, isEnabled } }` to local storage, then sends `{ success: true }` back to the popup.
+  </Step>
+</Steps>

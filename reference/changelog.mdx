@@ -1,0 +1,49 @@
+---
+title: "Traffic Blocker Changelog"
+sidebarTitle: "Changelog"
+description: "Version history and release notes for Traffic Blocker, following Keep a Changelog and Semantic Versioning conventions."
+---
+
+Traffic Blocker follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The current release is `0.1.9`, as declared in `package.json`.
+
+## [Unreleased]
+
+The `[Unreleased]` section in `CHANGELOG.md` is currently empty — no changes have been staged for the next release yet.
+
+## [0.1.9] — Current Release
+
+The following capabilities are present in the `0.1.9` release.
+
+### Rule Management
+
+- **Block URLs via wildcard patterns** — Rules accept standard match patterns such as `*://*.example.com/*`, mapping directly to the `declarativeNetRequest` URL filter format.
+- **Optional initiator domain filtering** — Each rule can optionally restrict matching to requests initiated from a specific domain, avoiding over-blocking on shared CDN hostnames.
+- **Toggle blocking on/off** — A global enable/disable switch suspends all active rules without deleting them, making it easy to temporarily allow all traffic.
+- **Preview and edit rules in a modal window** — The rule editor opens a full-screen modal with a JSON editor for inspecting and modifying rule definitions in place.
+- **Search and filter rules** — A live search field filters the rules list by URL pattern or initiator domain as you type.
+- **Move rules up/down for priority ordering** — Rules are evaluated in list order; drag handles and up/down controls let you adjust priority without re-entering rules.
+- **Duplicate detection** — The extension warns when a newly added rule is identical to an existing one, preventing redundant entries.
+- **Undo deleted rules (5-second window)** — Deleting a rule shows a temporary undo toast, giving you five seconds to recover an accidentally removed rule before it is permanently discarded.
+- **Clear all rules** — A single action removes all rules after confirmation, resetting the extension to a clean state.
+
+### Import and Export
+
+- **Export rules to JSON** — The full rule set can be exported as a `.json` file for backup or sharing between browsers and machines.
+- **Import rules from a JSON file** — Import rules from a local file with a choice of **merge** (add to existing rules) or **replace** (overwrite all existing rules) modes.
+- **Import rules from a URL** — Fetch a remote JSON ruleset directly by entering a URL, enabling subscription-style blocklists hosted anywhere.
+
+### Preset Blocklists
+
+- **Advertising** — Blocks requests to known advertising networks and ad-serving domains.
+- **Trackers** — Blocks analytics and behavioural tracking endpoints.
+- **Social Media** — Blocks social media widgets, share buttons, and embeds from loading on third-party sites.
+- **Malware** — Blocks requests to domains associated with malware distribution and phishing.
+
+### UI and Metrics
+
+- **Dark mode** — The popup UI respects the user's system colour scheme preference and can also be toggled manually.
+- **Blocked traffic counter with reset** — A running count of requests blocked since the last reset is displayed in the popup header. The counter can be reset to zero at any time.
+
+<Note>
+  This project is in early development (v0.x). Breaking changes to the storage schema or rule format may occur before v1.0. Back up your rules using the export feature before upgrading.
+</Note>

@@ -1,0 +1,107 @@
+---
+title: "chrome.storage.local Schema for Traffic Blocker"
+sidebarTitle: "Storage Schema"
+description: "Reference for the two keys Traffic Blocker writes to chrome.storage.local: settings (blocked counter, dark mode) and blocker (rules, enabled state)."
+---
+
+Traffic Blocker persists all of its runtime state in `chrome.storage.local`. There are exactly two top-level keys: `settings`, which tracks the blocked-request counter and the user's dark mode preference, and `blocker`, which holds the full rule list and the on/off toggle state. Neither the popup nor the background worker uses any other storage area.
+
+## `settings` Key
+
+The `settings` object is written by both the **background service worker** (incrementing `blocked`) and the **`App.vue` root component** (setting `darkMode`).
+
+<ParamField body="blocked" type="number" required>
+  Total number of network requests that have been blocked since the extension was installed or statistics were last reset. Incremented by the background service worker each time `chrome.webRequest.onErrorOccurred` fires with `net::ERR_BLOCKED_BY_CLIENT`.
+</ParamField>
+
+<ParamField body="darkMode" type="boolean">
+  Dark mode preference. When `true`, `App.vue` adds the `dark-mode` CSS class to `document.body`. Persisted so the preference survives popup close and browser restarts.
+</ParamField>
+
+```typescript
+interface Settings {
+  blocked: number;
+  darkMode?: boolean;
+}
+```
+
+## `blocker` Key
+
+The `blocker` object is written exclusively by the **background service worker** after a successful `declarativeNetRequest.updateDynamicRules` call. The popup reads it on mount to restore the last known state.
+
+<ParamField body="rules" type="Rule[]" required>
+  The complete list of `declarativeNetRequest` rules currently managed by the extension. Rules are stored even when `isEnabled` is `false` so they can be re-applied without the user re-entering them.
+</ParamField>
+
+<ParamField body="isEnabled" type="boolean" required>
+  Whether blocking is currently active. When `false`, the rules array is kept in storage but an empty array is passed to `declarativeNetRequest.updateDynamicRules`, so no requests are actually blocked.
+</ParamField>
+
+```typescript
+interface BlockerState {
+  rules: Rule[];
+  isEnabled: boolean;
+}
+```
+
+## Rule Object
+
+Each element of `blocker.rules` conforms to the `declarativeNetRequest` rule shape. The background worker runs every rule through `autoFixRule()` before storage, so missing fields are filled with safe defaults.
+
+<ParamField body="id" type="number" required>
+  Unique numeric identifier for the rule. IDs are assigned sequentially starting from `1` every time the rule list is updated — they are not stable across updates.
+</ParamField>
+
+<ParamField body="priority" type="number" required>
+  Rule matching priority. Defaults to `1` when not supplied. Higher values take precedence when multiple rules could match the same request.
+</ParamField>
+
+<ParamField body="action" type="object" required>
+  The action to perform when the rule matches. Traffic Blocker always uses `{ type: 'block' }`.
+</ParamField>
+
+<ParamField body="condition" type="object" required>
+  Matching condition object. At minimum, `urlFilter` must be present.
+</ParamField>
+
+<ParamField body="condition.urlFilter" type="string" required>
+  URL pattern to match against the request URL. Supports wildcards, for example `*://*.example.com/*`.
+</ParamField>
+
+<ParamField body="condition.initiatorDomains" type="string[]">
+  When set, the rule only blocks requests that originate from one of the listed domains. Useful for domain-scoped blocking without affecting the same resource on other sites.
+</ParamField>
+
+<ParamField body="condition.excludedInitiatorDomains" type="string[]">
+  When set, requests originating from these domains are **not** blocked even if the URL matches. Defaults include `'localhost'` to prevent breaking local development environments.
+</ParamField>
+
+A fully-specified rule object looks like this:
+
+```json
+{
+  "id": 1,
+  "priority": 1,
+  "action": { "type": "block" },
+  "condition": {
+    "urlFilter": "*://*.example.com/*",
+    "initiatorDomains": ["tracker.ads.com"],
+    "excludedInitiatorDomains": ["localhost"]
+  }
+}
+```
+
+## Initialization on Install
+
+When `chrome.runtime.onInstalled` fires, the background worker reads both keys. If either is absent it writes the corresponding default:
+
+| Key | Default value written |
+|-----|-----------------------|
+| `settings` | `{ blocked: 0 }` |
+| `blocker` | `{ rules: [], isEnabled: false }` |
+
+If the key already exists (e.g. on extension update rather than fresh install) the existing value is left untouched.
+
+<Note>
+  IDs are reassigned sequentially (starting from 1) every time rules are updated. Do not rely on stored IDs being stable.
+</Note>

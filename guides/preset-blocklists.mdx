@@ -1,0 +1,109 @@
+---
+title: "Load Preset Blocklists for Ads, Trackers, and Malware"
+sidebarTitle: "Preset Blocklists"
+description: "One-click preset blocklists for advertising networks, analytics trackers, social media widgets, and malicious domains."
+---
+
+Preset blocklists give you an instant, curated starting point without having to research and enter individual domains yourself. Each preset targets a specific category of unwanted traffic and generates a full set of blocking rules with a single click. You can find the **Preset Blocklists** section at the bottom of the **Settings** view (sliders icon on the Dashboard).
+
+## Available Presets
+
+<AccordionGroup>
+  <Accordion title="Advertising">
+    Blocks requests to major advertising networks and ad-serving infrastructure, including display ads, programmatic networks, and retargeting platforms.
+
+    **Domains covered:**
+    - `doubleclick.net`
+    - `googlesyndication.com`
+    - `googleadservices.com`
+    - `googletag.com`
+    - `googletagmanager.com`
+    - `adservice.google.com`
+    - `pagead2.googlesyndication.com`
+    - `ads.facebook.com`
+    - `advertising.com`
+    - `adnxs.com`
+    - `criteo.com`
+    - `outbrain.com`
+    - `taboola.com`
+  </Accordion>
+
+  <Accordion title="Trackers">
+    Blocks analytics and behavioural tracking scripts that record page visits, user interactions, heatmaps, and session recordings.
+
+    **Domains covered:**
+    - `google-analytics.com`
+    - `googletagmanager.com`
+    - `hotjar.com`
+    - `mixpanel.com`
+    - `segment.io`
+    - `segment.com`
+    - `amplitude.com`
+    - `fullstory.com`
+    - `crazyegg.com`
+    - `mouseflow.com`
+    - `inspectlet.com`
+  </Accordion>
+
+  <Accordion title="Social Media">
+    Blocks third-party social widgets, like buttons, and embedded feeds that load external scripts and track users across sites.
+
+    **Domains covered:**
+    - `connect.facebook.net`
+    - `platform.twitter.com`
+    - `platform.linkedin.com`
+    - `apis.google.com`
+    - `accounts.google.com`
+    - `social9.com`
+    - `addthis.com`
+    - `sharethis.com`
+    - `sharingbuttons.io`
+  </Accordion>
+
+  <Accordion title="Malware">
+    Blocks connections to known malicious domains used for phishing, drive-by downloads, and other malware delivery.
+
+    **Domains covered:**
+    - `malware.com`
+    - `phishing.com`
+    - `suspicious-domain.com`
+  </Accordion>
+</AccordionGroup>
+
+## Loading a Preset
+
+<Steps>
+  <Step title="Open Settings">
+    Click the **sliders icon** on the Dashboard to navigate to Settings, then scroll to the **Preset Blocklists** section.
+  </Step>
+  <Step title="Click a preset button">
+    Click the button for the preset you want to load (e.g. **Advertising**). A confirmation dialog appears showing the number of rules that will be added and asking how to handle your existing rules.
+  </Step>
+  <Step title="Choose Replace or Merge">
+    Select **Replace** to discard all current rules and load only the preset, or **Merge** to append the preset rules to your existing list.
+  </Step>
+</Steps>
+
+After loading, the extension **automatically enables blocking** (`isEnabled: true`) regardless of the toggle's previous state, so the preset takes effect immediately.
+
+<Tip>
+  Use Merge if you want to combine a preset with your existing custom rules.
+</Tip>
+
+## Rule Format Generated
+
+Each domain in a preset is converted into a `declarativeNetRequest` rule using the following structure:
+
+```json
+{
+  "id": 1,
+  "priority": 1,
+  "action": { "type": "block" },
+  "condition": {
+    "urlFilter": "*://*.doubleclick.net/*",
+    "excludedInitiatorDomains": ["localhost"]
+  }
+}
+```
+
+The `urlFilter` is constructed as `*://*.{domain}/*`, which matches all subdomains and paths over both HTTP and HTTPS. The `excludedInitiatorDomains: ['localhost']` entry ensures that local development environments are never affected by preset rules.

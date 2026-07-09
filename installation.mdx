@@ -1,0 +1,94 @@
+---
+title: "Install Traffic Blocker from Source"
+sidebarTitle: "Installation"
+description: "Clone the Traffic Blocker repository, build the extension with Vite, and load it as an unpacked extension in any Chromium-based browser."
+---
+
+This page walks you through every step needed to go from a fresh clone of the Traffic Blocker repository to a running extension in your browser. You will clone the source, install dependencies, run the production build, and load the resulting `dist/` folder as an unpacked Chrome extension — no Chrome Web Store account required.
+
+## Prerequisites
+
+<Note>
+  Make sure the following are available on your machine before you begin:
+
+  - **Node.js 18+** — tested with 18.x, 20.x, and 22.x
+  - **npm 8+** or **pnpm** (the project ships with a `pnpm`-based lockfile)
+  - A **Chromium-based browser** — Chrome, Microsoft Edge, or Brave all support unpacked MV3 extensions
+</Note>
+
+## Build Steps
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the project from GitHub and move into the new directory:
+
+    ```bash
+    git clone https://github.com/alexperezortuno/ce-blocker.git && cd ce-blocker
+    ```
+  </Step>
+
+  <Step title="Install dependencies">
+    Install all Node dependencies. Both npm and pnpm are supported:
+
+    <CodeGroup>
+      ```bash npm
+      npm install
+      ```
+
+      ```bash pnpm
+      pnpm install
+      ```
+    </CodeGroup>
+
+    This pulls in Vue 3, Vite, TypeScript, the `vite-plugin-web-extension` plugin, and all other runtime and dev dependencies listed in `package.json`.
+  </Step>
+
+  <Step title="Build the extension">
+    Compile the extension for production:
+
+    <CodeGroup>
+      ```bash npm
+      npm run build
+      ```
+
+      ```bash pnpm
+      pnpm run build
+      ```
+    </CodeGroup>
+
+    The build script runs `vue-tsc` first for a full TypeScript type-check, then hands off to `vite build`. On success, a `dist/` folder is created at the repository root containing:
+
+    - `index.html` — the popup entry point
+    - `assets/background.js` — the compiled service worker
+    - `manifest.json` — the MV3 manifest (merged from `public/manifest.json` and `package.json` by Vite)
+    - All bundled JS, CSS, and static assets
+  </Step>
+
+  <Step title="Load in Chrome">
+    Load the compiled extension as an unpacked extension:
+
+    1. Open **`chrome://extensions`** in your browser's address bar.
+    2. Enable the **Developer mode** toggle in the top-right corner.
+    3. Click **Load unpacked**.
+    4. Select the **`dist/`** folder inside the cloned repository.
+
+    Traffic Blocker now appears in your extensions list and its icon is available in the Chrome toolbar.
+  </Step>
+</Steps>
+
+## After Loading
+
+<Tip>
+  After loading the extension, Chrome assigns it a unique **Extension ID** (displayed on the `chrome://extensions` card). You can use this ID as the `extensionId` argument in `chrome.runtime.sendMessage` calls from other extensions or from a content script if you need to integrate Traffic Blocker programmatically into a larger automation workflow.
+</Tip>
+
+## Updating
+
+When upstream changes are available, pull the latest code and rebuild:
+
+```bash
+git pull
+npm run build
+```
+
+Then open `chrome://extensions`, find the Traffic Blocker card, and click the **refresh** (↺) button to reload the extension from the updated `dist/` folder. No need to remove and re-add it — your saved rules and settings are preserved in `chrome.storage.local`.

@@ -1,0 +1,63 @@
+---
+title: "npm Scripts Reference for Traffic Blocker Development"
+sidebarTitle: "Commands"
+description: "Reference for all npm scripts in Traffic Blocker: dev server, build, preview, package for Chrome Web Store, and clean."
+---
+
+Traffic Blocker ships five npm scripts covering the full development and release workflow — from spinning up a live preview of the popup UI, through TypeScript type-checking and production bundling, to creating a submission-ready zip archive for the Chrome Web Store.
+
+## Commands Overview
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start Vite dev server |
+| `npm run build` | TypeScript check (`vue-tsc`) + production build to `dist/` |
+| `npm run preview` | Preview production build locally |
+| `npm run package` | Build + create Chrome Web Store zip |
+| `npm run clean` | Remove `dist/` and `build/` directories |
+
+## Detailed Descriptions
+
+### `npm run dev`
+
+Starts the Vite dev server. Useful for previewing the popup UI in a browser tab during development — hot module replacement (HMR) is active, so component changes reflect instantly without a full reload.
+
+<Note>
+  Chrome extension APIs (`chrome.*`) are not available in the browser dev server — use this only for UI layout work. To test actual blocking behaviour, you must load the extension from `dist/` as an unpacked extension in Chrome.
+</Note>
+
+### `npm run build`
+
+Runs the following steps in sequence:
+
+1. `npm run clean` — clears stale output from previous builds
+2. `vue-tsc` — performs a full TypeScript type check across all `.vue` and `.ts` source files (strict mode, no emit)
+3. `vite build` — bundles the popup and background service worker into `dist/`
+
+The `dist/` directory is the folder you load as an unpacked extension in Chrome via **chrome://extensions → Load unpacked**.
+
+### `npm run preview`
+
+Runs Vite's built-in preview server against the `dist/` build output. Useful for quick visual checks of the popup UI before packaging, without needing to reload the unpacked extension in Chrome.
+
+### `npm run package`
+
+Runs `npm run build` then executes `node scripts/package.cjs`. The packaging script uses [JSZip](https://stuk.github.io/jszip/) to recursively bundle the entire `dist/` directory into a compressed zip archive. The output filename is derived from the `version` field in `package.json`:
+
+```bash
+build/traffic-blocker-0.1.9.zip
+```
+
+Upload this file directly to the [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole) when submitting a new release.
+
+### `npm run clean`
+
+Removes the `dist/` and `build/` directories using `rm -rf`. This script runs automatically as the first step of `npm run build`, so you rarely need to call it directly.
+
+```bash
+rm -rf dist build
+```
+
+<Note>
+  Always run `npm run build` (not `npm run dev`) before loading or testing the extension in Chrome. The dev server output is not a valid Chrome extension — it does not produce a `dist/manifest.json` or the compiled service worker that Chrome requires.
+</Note>

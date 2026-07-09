@@ -1,0 +1,61 @@
+---
+title: "Managing URL Blocking Rules in Traffic Blocker"
+sidebarTitle: "Managing Rules"
+description: "How to add, edit, search, reorder, delete, and undo URL blocking rules in Traffic Blocker."
+---
+
+The Dashboard is the main view of Traffic Blocker. It lists every URL blocking rule you have configured and gives you full control over adding new rules, editing existing ones, changing their priority order, enabling or disabling the blocker, and clearing everything at once. All changes are reflected in Chrome's `declarativeNetRequest` dynamic rules in real time.
+
+## Adding a Rule
+
+<Steps>
+  <Step title="Enter an initiator domain (optional)">
+    Type a domain in the first input field (e.g. `tracker.ads.com`) to restrict the rule to requests that originate from that domain. Leave this field blank to apply the rule to all origins — the extension will automatically set `excludedInitiatorDomains: ['localhost']` so local development traffic is never blocked.
+  </Step>
+  <Step title="Enter a URL filter pattern">
+    Type a URL filter pattern in the second input field, for example `*://*.example.com/*`. The pattern supports wildcard matching consistent with the Chrome `declarativeNetRequest` specification.
+  </Step>
+  <Step title="Submit the rule">
+    Press **Enter** or click the **Add rule** button. If the exact `urlFilter` value already exists in your rule list, a warning toast appears and the duplicate is not added.
+  </Step>
+</Steps>
+
+<Note>
+  Rules are stored in `chrome.storage.local` under the `blocker` key. They persist across browser restarts.
+</Note>
+
+## Enabling / Disabling Blocking
+
+The toggle switch in the top-right corner of the Dashboard controls whether blocking is active. When the switch shows **ON**, all stored rules are registered as dynamic rules in `declarativeNetRequest` and network requests are actively blocked. When you switch it **OFF**, every dynamic rule is removed from Chrome — but your stored rules remain intact in `chrome.storage.local` — so re-enabling the blocker immediately restores them without any data loss.
+
+## Searching Rules
+
+A search bar appears automatically below the navigation icons when you have **2 or more rules**. Typing in the search bar filters the rule list in real time, matching against both the `urlFilter` pattern and any `initiatorDomains` associated with each rule. Clearing the search field restores the full list.
+
+## Editing a Rule
+
+Click any rule row to open the **Edit Rule** modal. The modal exposes three fields:
+
+| Field | Required | Notes |
+|---|---|---|
+| **URL Filter** | Yes | The URL pattern to block. |
+| **Initiator Domains** | No | Comma-separated list of domains that trigger the rule. |
+| **Excluded Domains** | No | Comma-separated list of domains exempted from this rule. |
+
+Click **Save** to apply your changes. The rule is updated immediately and Chrome's dynamic rules are synchronized.
+
+<Note>
+  Clicking the **Delete** button in the edit modal (labeled with a red "Cancel" style button) removes the rule entirely, identical to using the X button on the rule row.
+</Note>
+
+## Reordering Rules
+
+Each rule row has an **up chevron** (▲) and a **down chevron** (▽) button on the right side. Clicking these moves the rule one position up or down in the list. The buttons are disabled at the top or bottom of the list respectively. Rule order corresponds directly to matching priority — the first matching rule wins when a network request matches multiple rules.
+
+## Deleting a Rule
+
+Click the **X button** on any rule row to delete it. A toast notification appears for **5 seconds** with an **Undo** button. Clicking **Undo** within that window restores the rule to its original position in the list. After 5 seconds the deletion becomes permanent.
+
+## Clear All Rules
+
+The **trash icon** in the Dashboard header removes every rule and disables the blocker in a single action. Because this is irreversible, a confirmation dialog appears first showing the exact number of rules that will be deleted. The blocker's `isEnabled` state is set to `false` and `chrome.storage.local` is updated accordingly.

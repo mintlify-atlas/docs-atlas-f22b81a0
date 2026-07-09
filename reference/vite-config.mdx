@@ -1,0 +1,80 @@
+---
+title: "Vite Build Configuration for Traffic Blocker"
+sidebarTitle: "Vite Config"
+description: "How Traffic Blocker's vite.config.ts configures multi-entry builds for the popup and background service worker, and Bootstrap path aliases."
+---
+
+`vite.config.ts` configures the Vite build for two entry points — the popup and the background service worker — and sets a Bootstrap path alias for SCSS imports. It also wires in the `vite-plugin-web-extension` manifest generator so that `package.json` metadata is merged into `dist/manifest.json` on every build.
+
+## Full Configuration
+
+```typescript
+import {defineConfig} from 'vite'
+import vue from '@vitejs/plugin-vue'
+import webExtension, {readJsonFile} from "vite-plugin-web-extension";
+import * as path from "node:path";
+
+function generateManifest() {
+    const manifest = readJsonFile("src/manifest.json");
+    const pkg = readJsonFile("package.json");
+    return {
+        name: pkg.name,
+        description: pkg.description,
+        version: pkg.version,
+        ...manifest,
+    };
+}
+
+export default defineConfig({
+    plugins: [
+        vue(),
+    ],
+    resolve: {
+        alias: {
+            '~bootstrap': path.resolve(__dirname, 'node_modules/bootstrap'),
+        }
+    },
+    build: {
+        target: "esnext",
+        rollupOptions: {
+            input: {
+                popup: "index.html",
+                background: "src/background/background.ts",
+            },
+            output: {
+                entryFileNames: "assets/[name].js"
+            }
+        }
+    }
+});
+```
+
+## Key Settings
+
+<ParamField path="plugins: [vue()]" type="plugin">
+  Enables Vue 3 Single File Component (SFC) compilation. All `.vue` files in `src/` are processed by `@vitejs/plugin-vue` during bundling.
+</ParamField>
+
+<ParamField path="resolve.alias['~bootstrap']" type="string">
+  Maps the `~bootstrap` prefix to the Bootstrap package in `node_modules/`. This allows SCSS files to use concise imports such as `@import '~bootstrap/scss/bootstrap'` without needing to resolve the full `node_modules` path manually.
+</ParamField>
+
+<ParamField path="build.target" type="string">
+  Set to `"esnext"` to target modern, evergreen browsers. Chrome extensions run exclusively in Chrome, which fully supports the latest ECMAScript features, so no legacy transpilation is needed.
+</ParamField>
+
+<ParamField path="rollupOptions.input.popup" type="string">
+  The popup entry point: `"index.html"`. Rollup bundles this HTML file and all its imported scripts and styles into `dist/`, producing the popup UI loaded when the user clicks the toolbar icon.
+</ParamField>
+
+<ParamField path="rollupOptions.input.background" type="string">
+  The service worker entry point: `"src/background/background.ts"`. This module runs as the MV3 background service worker and handles `declarativeNetRequest` rule management.
+</ParamField>
+
+<ParamField path="rollupOptions.output.entryFileNames" type="string">
+  The output filename pattern `"assets/[name].js"` causes Rollup to emit the two entry points as `assets/popup.js` and `assets/background.js`. The `background.js` path matches the value declared in `manifest.json` under `background.service_worker`.
+</ParamField>
+
+<Tip>
+  The `entryFileNames` pattern ensures the background service worker is always output as `assets/background.js`, matching the path declared in `manifest.json`. Changing either value without updating the other will prevent the service worker from loading in Chrome.
+</Tip>

@@ -1,0 +1,80 @@
+---
+title: "Building and Packaging Traffic Blocker for Chrome Web Store"
+sidebarTitle: "Build & Package"
+description: "How Traffic Blocker is built with Vite, what the dist/ folder contains, and how to create a Chrome Web Store zip with npm run package."
+---
+
+Traffic Blocker uses a Vite build pipeline configured for Chrome extension output. Two entry points are compiled in a single pass — the Vue 3 popup SPA and the background service worker — with TypeScript validation run by `vue-tsc` before the production bundle is generated. A small Node.js packaging script then zips the `dist/` folder into an archive ready for the Chrome Web Store developer dashboard.
+
+## Build Entry Points
+
+`vite.config.ts` defines two Rollup input entries under `build.rollupOptions.input`:
+
+<ParamField body="popup" type="string" required>
+  `index.html` — the Vue 3 popup SPA. Vite processes the HTML file, bundles all imported scripts (including `main.ts` and its Vue component tree), and writes the result to `dist/index.html` + `dist/assets/popup.js`.
+</ParamField>
+
+<ParamField body="background" type="string" required>
+  `src/background/background.ts` — the MV3 background service worker. Compiled to a plain ES module and written to `dist/assets/background.js`, matching the path declared in `manifest.json` under `background.service_worker`.
+</ParamField>
+
+All entry files are emitted to `assets/[name].js` via the `output.entryFileNames` option, ensuring the background script lands at the exact path the manifest expects.
+
+The `resolve.alias` configuration maps `~bootstrap` to the `node_modules/bootstrap` directory, allowing SCSS imports to reference Bootstrap source files directly.
+
+## Build Output
+
+After `npm run build` completes, the `dist/` folder contains everything Chrome needs to load the extension:
+
+| File | Description |
+|------|-------------|
+| `index.html` | Popup HTML shell with a `<div id="app">` mount point |
+| `assets/popup.js` | Full Vue 3 app bundle (components, router, third-party deps) |
+| `assets/background.js` | Compiled background service worker |
+| `manifest.json` | Extension manifest — merged from `public/manifest.json` and `package.json` version via `vite-plugin-web-extension` |
+| `blocker.png` | Extension toolbar icon copied from `public/` |
+
+## TypeScript Configuration
+
+The project uses TypeScript in strict mode. The path alias `@/*` maps to `src/*`, allowing imports like `import type { Rule } from '@/types'` from anywhere in the source tree without relative path traversal.
+
+TypeScript checking is performed by `vue-tsc` (the Vue-aware TypeScript compiler) as a separate step before `vite build`. If type errors are present the build exits early.
+
+## npm Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start Vite dev server |
+| `npm run build` | TypeScript check (`vue-tsc`) + production build to `dist/` |
+| `npm run preview` | Preview production build locally |
+| `npm run package` | Build + create zip for Chrome Web Store (`build/traffic-blocker-{version}.zip`) |
+| `npm run clean` | Remove `dist/` and `build/` folders |
+
+<Note>
+  The `build` script in `package.json` calls `pnpm run clean` before `vue-tsc && vite build`, so running `npm run build` directly already cleans the output directory first.
+</Note>
+
+## Creating a Chrome Web Store Package
+
+`npm run package` first runs the full build, then executes `scripts/package.cjs`. The script:
+
+<Steps>
+  <Step title="Reads the version from package.json">
+    The version string (e.g. `0.1.9`) is used to name the output archive `traffic-blocker-0.1.9.zip`.
+  </Step>
+  <Step title="Creates the build/ directory if absent">
+    The output directory is created with `fs.mkdirSync(outputDir, { recursive: true })` so the script is safe to run on a clean checkout.
+  </Step>
+  <Step title="Recursively adds dist/ to a JSZip archive">
+    `addDirToZip()` walks the `dist/` directory tree and adds every file to the zip at its relative path, preserving the folder structure Chrome expects when loading an unpacked extension.
+  </Step>
+  <Step title="Writes the zip with maximum DEFLATE compression">
+    `zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE', compressionOptions: { level: 9 } })` produces the final buffer, which is written to `build/traffic-blocker-{version}.zip`. The script prints the output path and file size in KB.
+  </Step>
+</Steps>
+
+Upload the resulting zip file to the [Chrome Web Store developer dashboard](https://chrome.google.com/webstore/devconsole) as a new version submission.
+
+<Tip>
+  Run `npm run clean && npm run build` before packaging to ensure the `dist/` folder is fresh. The `npm run package` command already calls `build`, which in turn calls `clean`, so running `npm run package` from scratch is always safe.
+</Tip>

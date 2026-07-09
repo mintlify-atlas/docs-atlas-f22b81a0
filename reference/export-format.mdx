@@ -1,0 +1,63 @@
+---
+title: "Traffic Blocker JSON Export and Import File Format"
+sidebarTitle: "Export Format"
+description: "The JSON file format used by Traffic Blocker's export and import features, covering the top-level structure and all per-rule fields."
+---
+
+The export and import file format is a JSON object with a `rules` array and an `isEnabled` flag. It is the single interchange format used across all import paths in Traffic Blocker — local file export, file import, URL import, and preset loading — making it straightforward to back up your configuration, share rule sets with others, or manage rules in bulk outside the extension UI.
+
+## Top-level structure
+
+<ResponseField name="rules" type="Rule[]">
+  Array of rule objects to be registered with the Chrome `declarativeNetRequest` engine. Each entry follows the [Rule Schema](/reference/rule-schema). An empty array is valid and results in no active blocking rules.
+</ResponseField>
+
+<ResponseField name="isEnabled" type="boolean">
+  Whether the traffic blocker was active at the time the file was exported. When this file is imported, this value controls whether blocking is switched on after the import completes.
+</ResponseField>
+
+## Full example
+
+```json
+{
+  "rules": [
+    {
+      "id": 1,
+      "priority": 1,
+      "action": { "type": "block" },
+      "condition": {
+        "urlFilter": "*://*.doubleclick.net/*",
+        "excludedInitiatorDomains": ["localhost"]
+      }
+    },
+    {
+      "id": 2,
+      "priority": 1,
+      "action": { "type": "block" },
+      "condition": {
+        "urlFilter": "*://api.tracker.com/*",
+        "initiatorDomains": ["shoppingsite.com"]
+      }
+    }
+  ],
+  "isEnabled": true
+}
+```
+
+## Import compatibility
+
+The importer accepts several input shapes to maintain backwards compatibility with older exports and third-party rule lists:
+
+- **Object format** (standard export): `{ "rules": [...] }` — the canonical format produced by the export function.
+- **Array format** (legacy): `[...]` — a bare array at the top level is converted to an object automatically via `Object.values()`, then processed as normal.
+- **Missing fields**: Any rule with absent or malformed fields is auto-fixed before being registered. See [Rule Schema — Auto-fix behavior](/reference/rule-schema#auto-fix-behavior) for the exact defaulting logic.
+
+When importing, you are prompted to either **Replace** (discard existing rules and load only the imported set) or **Merge** (append the imported rules to your current list). The same prompt appears for file imports, URL imports, and preset loading.
+
+## Using imported `isEnabled`
+
+The importer reads the `isEnabled` value from the JSON file when it is present and uses it to set the blocker's enabled state after the import completes. If the field is absent from the file, the extension's current enabled state is preserved unchanged. This means a file exported while blocking was active (`"isEnabled": true`) will automatically re-enable blocking on import, while a file missing the field entirely leaves whatever state the extension is currently in.
+
+<Note>
+  IDs in the imported file are ignored — Traffic Blocker reassigns IDs sequentially starting from 1 after every import.
+</Note>

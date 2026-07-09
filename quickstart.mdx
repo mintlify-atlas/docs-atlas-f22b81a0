@@ -1,47 +1,80 @@
 ---
-title: "Quickstart"
-description: "Begin with a guide on the fastest path to a successful outcome"
+title: "Get Started with Traffic Blocker in 3 Steps"
+sidebarTitle: "Quickstart"
+description: "Add your first URL blocking rule, enable the blocker, and verify that network traffic is blocked in Chrome DevTools in under 5 minutes."
 ---
 
-Describe how someone begins using your product. What is the first thing they need to do? Are there any prerequisites?
-
-A quickstart should take someone from zero to using your product. They'll get a quick win and a sense of what they can accomplish.
-
-## Prerequisites
-
-Before you begin, you must have:
-
-- Requirement one (for example, Node.js 18+, a free account, an API key)
-- Requirement two (for example, a compatible device, a compatible browser, a compatible operating system)
-
-## Get started
+This quickstart walks you through the core workflow: adding a URL blocking rule, flipping the toggle to activate it, and confirming in Chrome DevTools that matching requests are being dropped. By the end you will have a working rule in place and a clear mental model of how Traffic Blocker operates.
 
 <Steps>
-  <Step title="Install">
-    Describe how to install your product or sign up.
-
-    ```bash
-    npm install your-package
-    ```
+  <Step title="Open the extension popup">
+    Click the **Traffic Blocker** icon in the Chrome toolbar to open the popup. If you do not see the icon, click the puzzle-piece **Extensions** menu (⊞) to the right of the address bar, find Traffic Blocker in the list, and click the pin icon to keep it visible in the toolbar at all times.
   </Step>
-  <Step title="Configure">
-    Describe any setup or configuration needed before first use.
 
-    ```bash
-    your-cli init
-    ```
+  <Step title="Add a URL pattern">
+    The Dashboard view shows two input fields at the top:
+
+    - **Initiator domain** *(optional)* — enter a domain such as `tracker.ads.com` to restrict the rule so it only blocks requests that originate from that domain. Leave this field blank to block the URL pattern regardless of which page or origin triggers the request.
+    - **URL filter** *(required)* — enter the pattern you want to block. Patterns follow Chrome's `urlFilter` syntax:
+      - `*` matches any sequence of characters (protocol, subdomain, path segment, or query string).
+      - Example: `*://*.doubleclick.net/*` blocks all requests to any subdomain of `doubleclick.net` over HTTP or HTTPS.
+
+    Enter `*://*.doubleclick.net/*` in the URL filter field, leave the initiator field blank, then click **Add rule**. The rule appears immediately in the rule list below.
+
+    <Info>
+      Traffic Blocker checks for duplicates as you type. If an identical `urlFilter` already exists in the list, a warning is shown and the duplicate is not added.
+    </Info>
   </Step>
-  <Step title="Run it">
-    Show the first thing a user does to see it working.
 
-    ```bash
-    your-cli start
-    ```
+  <Step title="Enable blocking">
+    Locate the toggle switch at the top of the Dashboard. Flip it to the **ON** position. The label turns **green** to confirm that all registered rules are now active. If the toggle is OFF, rules are stored but not enforced — no requests will be blocked.
+  </Step>
+
+  <Step title="Verify blocking">
+    Confirm the rule is working in Chrome DevTools:
+
+    1. Open a new tab and press `F12` (or `Ctrl+Shift+I` / `Cmd+Option+I`) to open **DevTools**.
+    2. Switch to the **Network** tab and make sure recording is enabled (the red circle button).
+    3. Navigate to any page that loads resources from `doubleclick.net` (a news site or e-commerce page typically will).
+    4. In the Network tab filter bar, type `doubleclick` to narrow results.
+
+    Blocked requests will appear with the status **`(blocked:other)`** or will be absent from the waterfall entirely. This confirms that `declarativeNetRequest` is intercepting them at the network layer before they leave the browser.
   </Step>
 </Steps>
 
-<Tip>
-  Give people a way to get help. This could be a link to a support page, a chat with a customer support agent, or a forum for your product.
+## Example Rule JSON
 
-  Example: Need help? Reach out to us at [support@yourcompany.com](mailto:support@yourcompany.com).
-</Tip>
+When you export your rules (Settings → Export), each rule is serialised in the following format. You can also author rules by hand and import them as a JSON file:
+
+```json
+{
+  "id": 1,
+  "priority": 1,
+  "action": { "type": "block" },
+  "condition": {
+    "urlFilter": "*://*.doubleclick.net/*",
+    "excludedInitiatorDomains": ["localhost"]
+  }
+}
+```
+
+- **`urlFilter`** — the wildcard pattern to match against the full request URL.
+- **`excludedInitiatorDomains`** — domains from which the rule should *not* fire (e.g. your local dev environment).
+- **`priority`** — higher numbers take precedence when multiple rules match the same request.
+
+## What's Next
+
+<CardGroup cols={2}>
+  <Card title="Managing Rules" icon="list-check" href="/guides/managing-rules">
+    Search, reorder, edit, duplicate, and delete rules. Learn how priority order affects which rule wins when multiple patterns match.
+  </Card>
+  <Card title="Preset Blocklists" icon="shield-halved" href="/guides/preset-blocklists">
+    Load curated Advertising, Trackers, Social Media, or Malware blocklists with a single click from the Settings view.
+  </Card>
+  <Card title="Import & Export" icon="file-export" href="/guides/import-export">
+    Back up your rules to JSON, restore them on another machine, or subscribe to a remote blocklist URL.
+  </Card>
+  <Card title="Rule Schema" icon="code" href="/reference/rule-schema">
+    Full reference for every field in the Traffic Blocker rule object, including all supported `urlFilter` syntax and condition options.
+  </Card>
+</CardGroup>

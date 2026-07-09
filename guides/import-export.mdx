@@ -1,0 +1,111 @@
+---
+title: "Export and Import Traffic Blocker Rules"
+sidebarTitle: "Import & Export"
+description: "How to export rules as JSON, import from a local file or remote URL, and choose between merge and replace import modes."
+---
+
+Traffic Blocker lets you save your entire rule set to a JSON file and restore it later — useful for backing up a carefully tuned configuration, sharing rule sets with colleagues, or migrating your setup to a different machine. All import and export actions live in the **Settings** view, accessible via the sliders icon on the Dashboard.
+
+## Exporting Rules
+
+Click the **export icon** (file-export) in Settings to download your current rules. The extension reads `chrome.storage.local` and writes a file named `rules.json` to your downloads folder with the following structure:
+
+```json
+{
+  "rules": [
+    {
+      "id": 1,
+      "priority": 1,
+      "action": { "type": "block" },
+      "condition": {
+        "urlFilter": "*://*.example.com/*",
+        "excludedInitiatorDomains": ["localhost"]
+      }
+    }
+  ],
+  "isEnabled": true
+}
+```
+
+A success toast confirms the download. If the export fails for any reason, an error toast is shown instead.
+
+## Importing from a File
+
+<Steps>
+  <Step title="Open the file picker">
+    Click the **import icon** (file-import) in Settings. A native file picker opens filtered to `.json` files.
+  </Step>
+  <Step title="Select your rules file">
+    Choose a previously exported `rules.json` file. The extension reads the file, parses the JSON, and validates every rule — auto-fixing any missing fields with sensible defaults (see [Auto-fix behavior](#auto-fix-behavior) below).
+  </Step>
+  <Step title="Choose an import mode">
+    A dialog asks how to handle existing rules:
+    - **Replace** — all current rules are discarded and replaced by the imported set.
+    - **Merge** — the imported rules are appended to your existing rules.
+  </Step>
+</Steps>
+
+<Warning>
+  Replace mode permanently overwrites all existing rules. Export your current rules first if you want to keep them.
+</Warning>
+
+## Importing from a URL
+
+<Steps>
+  <Step title="Open the URL import dialog">
+    Click the **globe icon** in Settings. A prompt appears asking for a URL.
+  </Step>
+  <Step title="Enter the remote URL">
+    Type or paste a URL that starts with `http://` or `https://`. URLs with any other scheme are rejected with an error toast. The extension fetches the remote JSON with a **10-second timeout**.
+  </Step>
+  <Step title="Choose an import mode">
+    After a successful fetch the same **Replace / Merge** dialog appears as with file import. Select your preferred mode and the rules are applied immediately.
+  </Step>
+</Steps>
+
+## Auto-fix Behavior
+
+During import, each rule is validated and any missing fields are filled in automatically so that partial or legacy rule files are still accepted:
+
+| Missing field | Default applied |
+|---|---|
+| `id` | Sequential index starting at `1` |
+| `priority` | `1` |
+| `action` | `{ "type": "block" }` |
+| `condition` | `{ "urlFilter": "" }` |
+
+Both **array** and **object** formats for the `rules` field are accepted for backwards compatibility. If the top-level `rules` value is an object (e.g. a keyed map), it is automatically converted to an array via `Object.values()` before processing.
+
+## Example JSON File Format
+
+A complete, valid `rules.json` file looks like this:
+
+```json
+{
+  "rules": [
+    {
+      "id": 1,
+      "priority": 1,
+      "action": {
+        "type": "block"
+      },
+      "condition": {
+        "urlFilter": "*://*.doubleclick.net/*",
+        "excludedInitiatorDomains": ["localhost"]
+      }
+    },
+    {
+      "id": 2,
+      "priority": 1,
+      "action": {
+        "type": "block"
+      },
+      "condition": {
+        "urlFilter": "*://api.tracker.com/*",
+        "initiatorDomains": ["myapp.com"]
+      }
+    }
+  ],
+  "isEnabled": true
+}
+```

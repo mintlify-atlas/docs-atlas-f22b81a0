@@ -1,0 +1,140 @@
+---
+title: "Chrome Extension APIs Used by Traffic Blocker"
+sidebarTitle: "Chrome APIs"
+description: "Reference for the five Chrome extension APIs Traffic Blocker uses: storage, webRequest, declarativeNetRequest, runtime messaging, and permissions."
+---
+
+Traffic Blocker uses five Chrome extension APIs to persist state, detect blocked requests, enforce URL-blocking rules, and coordinate between the popup and the background service worker. All required APIs are declared upfront in `manifest.json` under the `permissions` and `host_permissions` keys — Chrome will not grant access to any API that is not listed there.
+
+## `chrome.storage.local`
+
+All persistent state — rules, the enabled flag, the blocked counter, and dark mode preference — is stored in `chrome.storage.local`. Both the popup and the background service worker read from and write to this area.
+
+**Methods used:**
+
+| Call | Where | Purpose |
+|------|-------|---------|
+| `chrome.storage.local.get(['settings', 'blocker'], callback)` | Background, `onInstalled` | Read both keys to check for first-run initialisation |
+| `chrome.storage.local.get(['settings'], callback)` | Background, `onErrorOccurred` | Read current blocked counter before incrementing |
+| `chrome.storage.local.set({ settings }, callback)` | Background + `App.vue` | Write updated counter or dark mode preference |
+| `chrome.storage.local.set({ blocker }, callback)` | Background, after rule update | Persist validated rules and enabled state |
+
+**Event:** `chrome.storage.onChanged` is available for the popup to react when the background updates storage (for example, to refresh the blocked counter in the Statistics view without requiring a page reload).
+
+**Permission required:** `"storage"`
+
+## `chrome.declarativeNetRequest`
+
+This is the core blocking API. Traffic Blocker uses the **dynamic rules** API, which allows rules to be added and removed at runtime without reloading the extension.
+
+**Methods used:**
+
+| Call | Purpose |
+|------|---------|
+| `chrome.declarativeNetRequest.getDynamicRules(callback)` | Retrieve the IDs of all currently-installed dynamic rules so they can be cleanly removed |
+| `chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds, addRules }, callback)` | Atomically remove old rules and install the new set in one call |
+
+**Update sequence:** Every rule update first calls `getDynamicRules` to collect the existing rule IDs, then calls `updateDynamicRules` passing those IDs in `removeRuleIds` and the new validated rules in `addRules`. When `isEnabled` is `false`, `addRules` receives an empty array — the rules are preserved in storage but no blocking is active.
+
+**Permissions required:** `"declarativeNetRequest"`, `"declarativeNetRequestFeedback"`
+
+## `chrome.webRequest.onErrorOccurred`
+
+This listener is how Traffic Blocker counts blocked requests. It attaches to all URLs and inspects every network error, incrementing the stored counter only for errors caused by a `declarativeNetRequest` block action.
+
+**Listener registration:**
+
+```typescript
+chrome.webRequest.onErrorOccurred.addListener(
+  (res: any) => {
+    if (res.error === 'net::ERR_BLOCKED_BY_CLIENT') {
+      chrome.storage.local.get(['settings'], (result: any) => {
+        if (result.settings.blocked !== undefined) {
+          chrome.storage.local.set({
+            settings: { blocked: result.settings.blocked + 1 }
+          });
+        }
+      });
+    }
+  },
+  { urls: ["<all_urls>"] },
+  ["extraHeaders"]
+);
+```
+
+The `extraHeaders` option is required to observe requests that carry sensitive headers. The filter `{ urls: ["<all_urls>"] }` ensures every request error is inspected regardless of protocol or domain.
+
+**Permission required:** `"webRequest"`  
+**Host permissions required:** `"http://*/*"`, `"https://*/*"`
+
+## `chrome.runtime.onMessage` / `chrome.runtime.sendMessage`
+
+The popup and the background service worker communicate exclusively through the runtime messaging API. There is a single message type:
+
+**Message shape (popup → background):**
+
+```typescript
+interface UpdateRulesMessage {
+  updateRules: {
+    data: Rule[];       // full current rule list
+    isEnabled: boolean; // whether blocking should be active
+  };
+}
+```
+
+**Response shape (background → popup):**
+
+```typescript
+interface UpdateRulesResponse {
+  success: boolean;
+  error?: string; // e.g. "Update in progress" or a Chrome runtime error message
+}
+```
+
+**Concurrency guard:** The background worker uses a module-level `isUpdatingRules` boolean flag. If a second `updateRules` message arrives before the first has completed, the background immediately responds with `{ success: false, error: 'Update in progress' }` rather than allowing two concurrent writes to race. The listener returns `true` to signal that `sendResponse` will be called asynchronously after the storage and `declarativeNetRequest` calls complete.
+
+**APIs:** `chrome.runtime.onMessage` (background), `chrome.runtime.sendMessage` (popup)  
+**No additional permission required** — runtime messaging is available to all extension contexts.
+
+## `chrome.runtime.onInstalled`
+
+This single-fire event is used for first-run initialisation. When the extension is installed for the first time, the background worker checks whether `settings` and `blocker` exist in `chrome.storage.local` and writes default values for any key that is missing:
+
+```typescript
+chrome.runtime.onInstalled.addListener(() => {
+  chrome.storage.local.get(['settings', 'blocker'], (result: any) => {
+    if (!result.settings) {
+      chrome.storage.local.set({ settings: { blocked: 0 } });
+    }
+    if (!result.blocker) {
+      chrome.storage.local.set({ blocker: { rules: [], isEnabled: false } });
+    }
+  });
+});
+```
+
+The guard (`if (!result.settings)`) ensures that updating the extension to a new version does not overwrite data the user has already accumulated.
+
+**No additional permission required.**
+
+## Permissions Declared in manifest.json
+
+```json
+{
+  "permissions": [
+    "storage",
+    "webRequest",
+    "declarativeNetRequest",
+    "declarativeNetRequestFeedback",
+    "nativeMessaging"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ]
+}
+```
+
+<Note>
+  Chrome MV3 service workers are ephemeral — the background script does not stay resident. It can be suspended by Chrome at any time between events. All persistent state goes through `chrome.storage.local`; never store critical data in module-level variables alone.
+</Note>

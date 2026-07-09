@@ -67,7 +67,7 @@ const autoFixRule = (rule: any, index: number): any => {
     return {
         id: index + 1,
         priority: typeof rule.priority === 'number' ? rule.priority : (typeof rule.priority === 'string' ? parseInt(rule.priority, 10) : 1),
-        action: rule.action && typeof rule.action.type === 'string' ? rule.action : {type: 'block'},
+        action: rule.action && typeof rule.action.type === 'string' ? rule.action : {type: chrome.declarativeNetRequest.RuleActionType.BLOCK},
         condition: rule.condition && typeof rule.condition.urlFilter === 'string' ? rule.condition : {urlFilter: rule.condition?.urlFilter || rule.rule || ''}
     };
 };

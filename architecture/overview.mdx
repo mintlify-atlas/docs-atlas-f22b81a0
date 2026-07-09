@@ -1,28 +1,32 @@
 ---
-title: "Traffic Blocker Architecture: Popup, Background Worker, and Storage"
+title: "Traffic Blocker: Vue 3 Popup and MV3 Background Architecture"
 sidebarTitle: "Overview"
 description: "How Traffic Blocker's Vue 3 popup, MV3 background service worker, and chrome.storage.local work together to block network requests."
 ---
 
-Traffic Blocker is built on a two-process architecture mandated by Chrome's Manifest V3 platform. A **Vue 3 single-page application** runs as the popup and handles all user interaction, while a **background service worker** owns the privileged Chrome API calls that actually block traffic. The two processes communicate exclusively through `chrome.runtime.sendMessage` and `chrome.storage.local` — the popup never calls `declarativeNetRequest` directly.
+Traffic Blocker is built on a two-process architecture mandated by Chrome's Manifest V3 platform. A **Vue 3 single-page application** runs as the popup and handles all user interaction, while a **background service worker** handles counting blocked requests and initialising storage on first install. Rule updates reach `declarativeNetRequest` through two paths: the Dashboard popup calls `declarativeNetRequest` directly for fast inline edits, while the Settings component routes preset and import operations through `chrome.runtime.sendMessage` to the background service worker.
 
 ## Directory Structure
 
-```
+```text
 src/
 ├── main.ts                  # Popup entry (Vue app + router)
 ├── App.vue                  # Root component (dark mode state)
+├── vite-env.d.ts            # Vite environment type declarations
 ├── background/
 │   └── background.ts        # Background service worker
-└── components/
-    ├── Dashboard.vue        # Main view — add/edit/delete/search/move rules, toggle
-    ├── Settings.vue         # Dark mode, export/import, presets
-    └── Statistics.vue       # Blocked traffic counter + reset
+├── components/
+│   ├── Dashboard.vue        # Main view — add/edit/delete/search/move rules, toggle
+│   ├── PageNotFound.vue     # Catch-all 404 route component
+│   ├── Settings.vue         # Dark mode, export/import, presets
+│   └── Statistics.vue       # Blocked traffic counter + reset
+└── scss/
+    └── style.scss           # Global SCSS styles
 ```
 
 ## Popup (Vue 3 SPA)
 
-`main.ts` bootstraps a Vue 3 application and mounts it to `#app` inside `index.html`. The app uses `vue-router` with `createWebHistory` and three named routes:
+`main.ts` bootstraps a Vue 3 application and mounts it to `#app` inside `index.html`. The app uses `vue-router` with `createWebHistory` and three content routes plus a catch-all:
 
 | Path | Name | Component |
 |------|------|-----------|
@@ -58,10 +62,10 @@ It registers three event listeners at startup inside an immediately-invoked `reg
 
 ## Communication Between Popup and Background
 
-The popup sends a single message type to the background whenever rules or the enabled state change:
+When the **Settings** component applies a preset or imports rules, it delegates to the background via `chrome.runtime.sendMessage`:
 
 ```typescript
-// Message sent by the popup (Dashboard.vue → chrome.runtime.sendMessage)
+// Message sent by Settings.vue → chrome.runtime.sendMessage
 interface UpdateRulesMessage {
   updateRules: {
     data: Rule[];       // full current rule list
@@ -80,25 +84,40 @@ The listener returns `true` to keep the message channel open for the asynchronou
 
 ## Data Flow
 
-When a user adds or edits a rule in the Dashboard the following sequence occurs:
+### Dashboard inline rule edits
+
+When a user adds or edits a rule directly in the Dashboard, `updateStaticRules()` handles everything inside the popup:
 
 <Steps>
   <Step title="User submits a rule">
     The Dashboard component validates the input and pushes the new rule into the local `rules` array.
   </Step>
   <Step title="Popup calls updateStaticRules()">
-    The helper serialises the full rule list and the current `isEnabled` flag into an `UpdateRulesMessage`.
+    The helper builds a cleaned rule list with sequential IDs starting from `1`, then calls `declarativeNetRequest` directly from the popup context.
   </Step>
-  <Step title="chrome.runtime.sendMessage dispatches to the background">
-    The popup calls `chrome.runtime.sendMessage({ updateRules: { data: rules, isEnabled } })` and awaits the response.
+  <Step title="declarativeNetRequest.updateDynamicRules applies the change">
+    All previous dynamic rules are removed by ID, then the new rules are added (or an empty array when `isEnabled` is `false`).
+  </Step>
+  <Step title="chrome.storage.local.set persists state">
+    The popup writes `{ blocker: { rules, isEnabled } }` to local storage directly, completing the update without a background round-trip.
+  </Step>
+</Steps>
+
+### Settings-driven rule updates (presets and imports)
+
+When the Settings component applies a preset blocklist or imports rules from a file, it routes the update through the background service worker:
+
+<Steps>
+  <Step title="Settings sends an updateRules message">
+    `chrome.runtime.sendMessage({ updateRules: { data: rules, isEnabled } })` dispatches to the background and awaits the response.
   </Step>
   <Step title="Background validates and auto-fixes">
     The service worker runs each rule through `autoFixRule()`, reassigning sequential IDs starting from `1`.
   </Step>
   <Step title="declarativeNetRequest.updateDynamicRules applies the change">
-    All previous dynamic rules are removed by ID, then the new rules are added (or an empty array is added when `isEnabled` is `false`).
+    All previous dynamic rules are removed by ID, then the new set is added (or an empty array when `isEnabled` is `false`).
   </Step>
-  <Step title="chrome.storage.local.set persists state">
+  <Step title="Background persists state and responds">
     The background writes `{ blocker: { rules, isEnabled } }` to local storage, then sends `{ success: true }` back to the popup.
   </Step>
 </Steps>

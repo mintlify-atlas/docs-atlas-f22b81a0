@@ -30,7 +30,7 @@ Starts the Vite dev server. Useful for previewing the popup UI in a browser tab 
 
 Runs the following steps in sequence:
 
-1. `npm run clean` — clears stale output from previous builds
+1. `pnpm run clean` — clears stale output from previous builds
 2. `vue-tsc` — performs a full TypeScript type check across all `.vue` and `.ts` source files (strict mode, no emit)
 3. `vite build` — bundles the popup and background service worker into `dist/`
 
@@ -42,7 +42,7 @@ Runs Vite's built-in preview server against the `dist/` build output. Useful for
 
 ### `npm run package`
 
-Runs `npm run build` then executes `node scripts/package.cjs`. The packaging script uses [JSZip](https://stuk.github.io/jszip/) to recursively bundle the entire `dist/` directory into a compressed zip archive. The output filename is derived from the `version` field in `package.json`:
+Runs `pnpm run build` then executes `node scripts/package.cjs`. The packaging script uses [JSZip](https://stuk.github.io/jszip/) to recursively bundle the entire `dist/` directory into a compressed zip archive. The output filename is derived from the `version` field in `package.json`:
 
 ```bash
 build/traffic-blocker-0.1.9.zip

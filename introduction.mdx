@@ -13,7 +13,7 @@ Traffic Blocker is a Chrome Manifest V3 extension that gives developers and powe
     Block any request matching a pattern such as `*://*.example.com/*`. Wildcards cover protocol, subdomain, path, and query string.
   </Card>
   <Card title="Initiator Domain Filtering" icon="crosshairs">
-    Optionally scope a rule to requests that originate from a specific domain, or exclude trusted origins like `localhost` from being blocked.
+    Optionally scope a rule to requests that originate from one or more specific domains (`initiatorDomains`). When no initiator domain is set, `localhost` is automatically added to `excludedInitiatorDomains` so local development traffic is never accidentally blocked.
   </Card>
   <Card title="Enable / Disable Toggle" icon="toggle-on">
     Flip a single switch to pause or resume all blocking instantly. The label turns green when blocking is active, making state obvious at a glance.
@@ -33,6 +33,18 @@ Traffic Blocker is a Chrome Manifest V3 extension that gives developers and powe
   <Card title="Import from Remote URL" icon="globe">
     Fetch a blocklist JSON file directly from a remote URL so you can subscribe to community-maintained lists without any manual copy-paste.
   </Card>
+  <Card title="Preview & Edit Rules" icon="pen-to-square">
+    Click any rule row to open a modal where you can inspect and edit its `urlFilter`, `initiatorDomains`, and `excludedInitiatorDomains` fields in place.
+  </Card>
+  <Card title="Search & Filter" icon="magnifying-glass">
+    A search bar (shown when two or more rules exist) filters the rule list in real time by URL pattern or initiator domain.
+  </Card>
+  <Card title="Reorder Rules" icon="arrows-up-down">
+    Move any rule up or down in the list to control matching priority. Higher-positioned rules take precedence when multiple patterns match the same request.
+  </Card>
+  <Card title="Undo Delete & Clear All" icon="rotate-left">
+    Deleted rules can be restored within a 5-second undo window. A **Clear All** button (trash icon) removes every rule and disables the blocker in one click.
+  </Card>
 </CardGroup>
 
 ## How It Works
@@ -50,7 +62,7 @@ Traffic Blocker is composed of two runtime contexts that communicate via `chrome
 | **Popup (Vue 3 SPA)** | `src/main.ts` → `App.vue` | Renders the Dashboard, Settings, and Statistics views; reads and writes rules to `chrome.storage.local` |
 | **Background service worker** | `src/background/background.ts` | Syncs `declarativeNetRequest` dynamic rules with storage; counts blocked requests |
 
-The popup is a standard Vue 3 application bootstrapped in `src/main.ts` with Vue Router (hash-based routing) and Font Awesome icons. Vite builds both contexts into the `dist/` folder alongside the `manifest.json`.
+The popup is a standard Vue 3 application bootstrapped in `src/main.ts` with Vue Router (history-mode routing via `createWebHistory`) and Font Awesome icons. Vite builds both contexts into the `dist/` folder alongside the `manifest.json`.
 
 ## Privacy
 

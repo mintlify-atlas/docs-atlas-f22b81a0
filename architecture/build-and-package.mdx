@@ -31,7 +31,7 @@ After `npm run build` completes, the `dist/` folder contains everything Chrome n
 | `index.html` | Popup HTML shell with a `<div id="app">` mount point |
 | `assets/popup.js` | Full Vue 3 app bundle (components, router, third-party deps) |
 | `assets/background.js` | Compiled background service worker |
-| `manifest.json` | Extension manifest — merged from `public/manifest.json` and `package.json` version via `vite-plugin-web-extension` |
+| `manifest.json` | Extension manifest — copied verbatim from `public/manifest.json` by Vite's static asset pipeline |
 | `blocker.png` | Extension toolbar icon copied from `public/` |
 
 ## TypeScript Configuration
@@ -45,7 +45,7 @@ TypeScript checking is performed by `vue-tsc` (the Vue-aware TypeScript compiler
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Start Vite dev server |
-| `npm run build` | TypeScript check (`vue-tsc`) + production build to `dist/` |
+| `npm run build` | Clean output dirs, TypeScript check (`vue-tsc`), then production build to `dist/` |
 | `npm run preview` | Preview production build locally |
 | `npm run package` | Build + create zip for Chrome Web Store (`build/traffic-blocker-{version}.zip`) |
 | `npm run clean` | Remove `dist/` and `build/` folders |
@@ -76,5 +76,5 @@ TypeScript checking is performed by `vue-tsc` (the Vue-aware TypeScript compiler
 Upload the resulting zip file to the [Chrome Web Store developer dashboard](https://chrome.google.com/webstore/devconsole) as a new version submission.
 
 <Tip>
-  Run `npm run clean && npm run build` before packaging to ensure the `dist/` folder is fresh. The `npm run package` command already calls `build`, which in turn calls `clean`, so running `npm run package` from scratch is always safe.
+  Running `npm run package` from scratch is always safe — the `package` script calls `build`, which in turn calls `clean` before compiling. There is no need to run `clean` manually beforehand.
 </Tip>

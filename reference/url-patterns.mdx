@@ -11,18 +11,18 @@ The `urlFilter` field in a Traffic Blocker rule follows Chrome's `declarativeNet
 | Wildcard | Meaning | Example |
 |----------|---------|---------|
 | `*` | Match any number of characters | `*://*.example.com/*` |
-| `\|` at start | Match URL prefix | `\|https://example.com` |
-| `\|` at end | Match URL suffix | `.gif\|` |
-| `\|\|` | Match domain and all subdomains | `\|\|example.com` |
+| `\|` at start | Left-anchor: match URL prefix | `\|https://example.com` |
+| `\|` at end | Right-anchor: match URL suffix | `.gif\|` |
+| `\|\|` | Domain anchor: match domain and all subdomains | `\|\|example.com` |
 
 ## Common pattern examples
 
 ```
-*://*.example.com/*          # Block all requests to example.com and subdomains
-*://ads.example.com/*        # Block only the ads subdomain
-*://*.example.com/ads/*      # Block only the /ads/ path on example.com
-*://*/track.js               # Block any URL ending in track.js
-https://*.example.com/*      # Block HTTPS requests only
+*://*.example.com/*       Block all requests to example.com and subdomains
+*://ads.example.com/*     Block only the ads subdomain
+*://*.example.com/ads/*   Block only the /ads/ path on example.com
+*://*/track.js            Block any URL ending in track.js
+https://*.example.com/*   Block HTTPS requests only
 ```
 
 Each pattern is tested against the full URL string. A pattern like `*://*/track.js` will match `https://cdn.any-domain.com/scripts/track.js` because the `*` portions absorb the protocol, hostname, and any intervening path segments.

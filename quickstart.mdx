@@ -1,5 +1,5 @@
 ---
-title: "Get Started with Traffic Blocker in 3 Steps"
+title: "Quickstart: Block Your First URL with Traffic Blocker"
 sidebarTitle: "Quickstart"
 description: "Add your first URL blocking rule, enable the blocker, and verify that network traffic is blocked in Chrome DevTools in under 5 minutes."
 ---
@@ -44,23 +44,30 @@ This quickstart walks you through the core workflow: adding a URL blocking rule,
 
 ## Example Rule JSON
 
-When you export your rules (Settings → Export), each rule is serialised in the following format. You can also author rules by hand and import them as a JSON file:
+When you export your rules (Settings → Export), the file contains a top-level object with a `rules` array and the current `isEnabled` state. You can author this file by hand and import it back using either **Replace** or **Merge** mode:
 
 ```json
 {
-  "id": 1,
-  "priority": 1,
-  "action": { "type": "block" },
-  "condition": {
-    "urlFilter": "*://*.doubleclick.net/*",
-    "excludedInitiatorDomains": ["localhost"]
-  }
+  "rules": [
+    {
+      "id": 1,
+      "priority": 1,
+      "action": { "type": "block" },
+      "condition": {
+        "urlFilter": "*://*.doubleclick.net/*",
+        "excludedInitiatorDomains": ["localhost"]
+      }
+    }
+  ],
+  "isEnabled": true
 }
 ```
 
 - **`urlFilter`** — the wildcard pattern to match against the full request URL.
-- **`excludedInitiatorDomains`** — domains from which the rule should *not* fire (e.g. your local dev environment).
+- **`excludedInitiatorDomains`** — domains from which the rule should *not* fire. When you add a rule without specifying an initiator domain, Traffic Blocker automatically adds `"localhost"` here so local development traffic is never accidentally blocked.
+- **`initiatorDomains`** — when present, the rule only fires for requests that originate from one of these domains. Set this to target a specific site's outbound calls.
 - **`priority`** — higher numbers take precedence when multiple rules match the same request.
+- **`isEnabled`** — top-level flag indicating whether all rules are active. Matches the toggle state at the time of export.
 
 ## What's Next
 

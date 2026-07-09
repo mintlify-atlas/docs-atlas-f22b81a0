@@ -1,7 +1,7 @@
 ---
-title: "Managing URL Blocking Rules in Traffic Blocker"
+title: "How to Manage URL Blocking Rules in Traffic Blocker"
 sidebarTitle: "Managing Rules"
-description: "How to add, edit, search, reorder, delete, and undo URL blocking rules in Traffic Blocker."
+description: "Learn how to add, edit, search, reorder, delete, and undo URL blocking rules in Traffic Blocker, including toggle behavior and duplicate detection."
 ---
 
 The Dashboard is the main view of Traffic Blocker. It lists every URL blocking rule you have configured and gives you full control over adding new rules, editing existing ones, changing their priority order, enabling or disabling the blocker, and clearing everything at once. All changes are reflected in Chrome's `declarativeNetRequest` dynamic rules in real time.
@@ -30,7 +30,7 @@ The toggle switch in the top-right corner of the Dashboard controls whether bloc
 
 ## Searching Rules
 
-A search bar appears automatically below the navigation icons when you have **2 or more rules**. Typing in the search bar filters the rule list in real time, matching against both the `urlFilter` pattern and any `initiatorDomains` associated with each rule. Clearing the search field restores the full list.
+A search bar appears automatically below the navigation icons when you have **more than one rule** (i.e., at least 2). Typing in the search bar filters the rule list in real time, matching against both the `urlFilter` pattern and any `initiatorDomains` associated with each rule. Clearing the search field restores the full list.
 
 ## Editing a Rule
 
@@ -45,7 +45,7 @@ Click any rule row to open the **Edit Rule** modal. The modal exposes three fiel
 Click **Save** to apply your changes. The rule is updated immediately and Chrome's dynamic rules are synchronized.
 
 <Note>
-  Clicking the **Delete** button in the edit modal (labeled with a red "Cancel" style button) removes the rule entirely, identical to using the X button on the rule row.
+  The edit modal has two action buttons: **Save** (blue, confirms changes) and **Delete** (red, the modal's cancel-side button). Clicking **Delete** removes the rule entirely and is equivalent to clicking the X button on the rule row directly.
 </Note>
 
 ## Reordering Rules

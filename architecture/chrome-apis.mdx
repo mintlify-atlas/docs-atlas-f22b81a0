@@ -1,5 +1,5 @@
 ---
-title: "Chrome Extension APIs Used by Traffic Blocker"
+title: "Chrome Extension APIs Reference for Traffic Blocker"
 sidebarTitle: "Chrome APIs"
 description: "Reference for the five Chrome extension APIs Traffic Blocker uses: storage, webRequest, declarativeNetRequest, runtime messaging, and permissions."
 ---
@@ -69,9 +69,9 @@ The `extraHeaders` option is required to observe requests that carry sensitive h
 
 ## `chrome.runtime.onMessage` / `chrome.runtime.sendMessage`
 
-The popup and the background service worker communicate exclusively through the runtime messaging API. There is a single message type:
+The Settings component uses the runtime messaging API to delegate preset and import rule updates to the background service worker. There is a single message type:
 
-**Message shape (popup → background):**
+**Message shape (Settings.vue → background):**
 
 ```typescript
 interface UpdateRulesMessage {

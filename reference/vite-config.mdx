@@ -4,7 +4,7 @@ sidebarTitle: "Vite Config"
 description: "How Traffic Blocker's vite.config.ts configures multi-entry builds for the popup and background service worker, and Bootstrap path aliases."
 ---
 
-`vite.config.ts` configures the Vite build for two entry points — the popup and the background service worker — and sets a Bootstrap path alias for SCSS imports. It also wires in the `vite-plugin-web-extension` manifest generator so that `package.json` metadata is merged into `dist/manifest.json` on every build.
+`vite.config.ts` configures the Vite build for two entry points — the popup and the background service worker — and sets a Bootstrap path alias for SCSS imports. It imports `readJsonFile` from `vite-plugin-web-extension` to power the `generateManifest()` helper, which merges `package.json` metadata into `dist/manifest.json` on every build. Note that the `webExtension` plugin itself is not added to the `plugins` array — only `vue()` is registered there.
 
 ## Full Configuration
 

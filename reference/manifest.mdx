@@ -4,7 +4,7 @@ sidebarTitle: "Manifest"
 description: "Reference for Traffic Blocker's manifest.json — permissions, host permissions, background service worker, and popup action configuration."
 ---
 
-`public/manifest.json` declares the Chrome extension's metadata, permissions, and entry points. At build time, `vite.config.ts` merges `name`, `description`, and `version` from `package.json` into the final manifest via the `generateManifest()` helper, ensuring the values in `dist/manifest.json` always stay in sync with `package.json`.
+`public/manifest.json` declares the Chrome extension's metadata, permissions, and entry points. At build time, `vite.config.ts` reads `src/manifest.json` and merges `name`, `description`, and `version` from `package.json` into the final manifest via the `generateManifest()` helper, ensuring the values in `dist/manifest.json` always stay in sync with `package.json`.
 
 ## Full Manifest
 
@@ -77,7 +77,7 @@ description: "Reference for Traffic Blocker's manifest.json — permissions, hos
 
 ## Version Merging at Build Time
 
-The source manifest under `public/manifest.json` intentionally keeps a static `version` field. At build time, `vite.config.ts` calls `readJsonFile('package.json')` and spreads `name`, `description`, and `version` from `package.json` on top of the manifest before Vite writes `dist/manifest.json`:
+The source manifest under `src/manifest.json` intentionally keeps a static `version` field. At build time, `vite.config.ts` calls `readJsonFile('package.json')` and spreads `name`, `description`, and `version` from `package.json` on top of the manifest before Vite writes `dist/manifest.json`:
 
 ```typescript
 function generateManifest() {
@@ -95,5 +95,5 @@ function generateManifest() {
 This means bumping the version in `package.json` is the single source of truth — the manifest version updates automatically on the next build.
 
 <Note>
-  Do not edit `dist/manifest.json` directly — it is overwritten on every build. Edit `public/manifest.json` and `package.json` instead.
+  Do not edit `dist/manifest.json` directly — it is overwritten on every build. Edit `src/manifest.json` and `package.json` instead.
 </Note>

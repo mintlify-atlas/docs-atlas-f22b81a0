@@ -1,5 +1,5 @@
 ---
-title: "chrome.storage.local Schema for Traffic Blocker"
+title: "Traffic Blocker chrome.storage.local Schema Reference"
 sidebarTitle: "Storage Schema"
 description: "Reference for the two keys Traffic Blocker writes to chrome.storage.local: settings (blocked counter, dark mode) and blocker (rules, enabled state)."
 ---
@@ -73,7 +73,7 @@ Each element of `blocker.rules` conforms to the `declarativeNetRequest` rule sha
 </ParamField>
 
 <ParamField body="condition.excludedInitiatorDomains" type="string[]">
-  When set, requests originating from these domains are **not** blocked even if the URL matches. Defaults include `'localhost'` to prevent breaking local development environments.
+  When set, requests originating from these domains are **not** blocked even if the URL matches. This field is optional and carries no automatic defaults — it is passed through from the rule as supplied by the user.
 </ParamField>
 
 A fully-specified rule object looks like this:

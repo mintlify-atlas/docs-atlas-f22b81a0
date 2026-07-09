@@ -49,7 +49,7 @@ The export and import file format is a JSON object with a `rules` array and an `
 The importer accepts several input shapes to maintain backwards compatibility with older exports and third-party rule lists:
 
 - **Object format** (standard export): `{ "rules": [...] }` — the canonical format produced by the export function.
-- **Array format** (legacy): `[...]` — a bare array at the top level is converted to an object automatically via `Object.values()`, then processed as normal.
+- **Object-valued `rules`** (legacy): if the `rules` value is a JSON object rather than an array, it is converted to an array automatically via `Object.values()` before processing.
 - **Missing fields**: Any rule with absent or malformed fields is auto-fixed before being registered. See [Rule Schema — Auto-fix behavior](/reference/rule-schema#auto-fix-behavior) for the exact defaulting logic.
 
 When importing, you are prompted to either **Replace** (discard existing rules and load only the imported set) or **Merge** (append the imported rules to your current list). The same prompt appears for file imports, URL imports, and preset loading.
@@ -59,5 +59,5 @@ When importing, you are prompted to either **Replace** (discard existing rules a
 The importer reads the `isEnabled` value from the JSON file when it is present and uses it to set the blocker's enabled state after the import completes. If the field is absent from the file, the extension's current enabled state is preserved unchanged. This means a file exported while blocking was active (`"isEnabled": true`) will automatically re-enable blocking on import, while a file missing the field entirely leaves whatever state the extension is currently in.
 
 <Note>
-  IDs in the imported file are ignored — Traffic Blocker reassigns IDs sequentially starting from 1 after every import.
+  IDs in the imported file are ignored — Traffic Blocker's background service worker reassigns IDs sequentially starting from 1 after every import.
 </Note>
